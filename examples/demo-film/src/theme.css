@@ -1,0 +1,25 @@
+/* 片子的视觉主题：从产品的主色与字体推出来，改这里就够了，director.html 不用动。
+   字体只用可商用的；中文默认思源黑体，没装就退到系统字体。
+   要用项目自带字体时，把 woff2 放进 src/fonts/，在下面加 @font-face。 */
+:root {
+  /* 背景：深色底，从上到下三档 */
+  --bg-top: #16263a;
+  --bg-mid: #0b1626;
+  --bg-deep: #050b14;
+  /* 品牌主色（聚焦描边、强调字、章节号）与它的浅色 */
+  --brand: #3fb6a8;
+  --brand-2: #8fe3d6;
+  /* 第二强调色（背景光斑、虚线） */
+  --accent: #e2b45a;
+  /* 文字 */
+  --text: #f3f6f9;
+  --text-dim: rgba(226, 233, 243, 0.72);
+  /* 卡片与标注底色 */
+  --panel: rgba(6, 14, 24, 0.93);
+  /* 应用窗口外框底色 */
+  --win-bg: #f2f4f8;
+
+  --font: 'Source Han Sans SC', 'Noto Sans CJK SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
+  --serif: 'Source Han Serif SC', 'Noto Serif CJK SC', 'Songti SC', serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, monospace;
+}

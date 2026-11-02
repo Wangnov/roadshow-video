@@ -1,0 +1,28 @@
+# 成片与中间产物
+out/
+frames/
+**/assets/seq/
+**/gen/
+**/build/apicache/
+**/audio/stems*/
+**/audio/sfxsrc/
+*.mp4
+*.mov
+*.wav
+*.mp3
+*.m4a
+
+# 下载的模型、音色库与依赖
+*.sf2
+*.sf3
+node_modules/
+.venv*/
+__pycache__/
+
+# 本机配置与密钥
+.env
+.env.*
+.dev.vars
+*.key
+
+.DS_Store

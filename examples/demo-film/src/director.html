@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>director</title>
+<link rel="stylesheet" href="./theme.css" />
+<style>
+  /* 颜色都取自 theme.css 的变量；透明度用 color-mix 叠，换主题只改变量 */
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--bg-deep); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  #stage { position: absolute; inset: 0; overflow: hidden; }
+
+  /* 背景：深色渐变、细网格、缓慢漂移的光斑 */
+  #bg { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 0%, var(--bg-top) 0%, var(--bg-mid) 55%, var(--bg-deep) 100%); }
+  #bg .grid { position: absolute; inset: -80px; background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px); background-size: 64px 64px; mask-image: radial-gradient(70% 70% at 50% 45%, #000 0%, transparent 100%); }
+  #bg .glow { position: absolute; width: 1100px; height: 1100px; border-radius: 50%; filter: blur(90px); opacity: .55; }
+  #bg .g1 { background: radial-gradient(circle, color-mix(in srgb, var(--brand) 24%, transparent), transparent 65%); }
+  #bg .g2 { background: radial-gradient(circle, color-mix(in srgb, var(--accent) 32%, transparent), transparent 65%); }
+
+  /* 世界：浏览器窗口与应用 */
+  #world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  .win { position: absolute; left: 0; top: 0; border-radius: 14px; overflow: hidden; background: var(--win-bg);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 40px 120px rgba(0,0,0,.45), 0 12px 36px rgba(0,0,0,.3); }
+  .win-bar { height: 36px; background: linear-gradient(#fdfdfe, #f1f3f7); border-bottom: 1px solid #e3e7ee; display: flex; align-items: center; padding: 0 16px; gap: 8px; position: relative; }
+  .win-bar i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+  .win-bar i:nth-child(1) { background: #ec6a5e; } .win-bar i:nth-child(2) { background: #f4bf4f; } .win-bar i:nth-child(3) { background: #61c554; }
+  .win-url { position: absolute; left: 50%; top: 7px; transform: translateX(-50%); height: 22px; min-width: 360px; padding: 0 16px; border-radius: 6px; background: #e8ebf1; color: #5b6679; font-size: 12.5px; display: flex; align-items: center; justify-content: center; gap: 6px; letter-spacing: .3px; }
+  .win-url svg { opacity: .55; }
+  .win-body { position: relative; overflow: hidden; }
+  .win-body iframe { position: absolute; inset: 0; border: 0; display: block; background: var(--win-bg); }
+
+  /* 聚焦：周围压暗、轻微虚化，主体描边 */
+  #focus { position: absolute; inset: 0; pointer-events: none; opacity: 0; backdrop-filter: blur(2.5px) saturate(.85); background: color-mix(in srgb, var(--bg-deep) 52%, transparent); }
+  #ring { position: absolute; pointer-events: none; opacity: 0; border-radius: 12px; border: 2px solid color-mix(in srgb, var(--brand-2) 95%, transparent);
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--brand) 18%, transparent), 0 0 40px color-mix(in srgb, var(--brand) 35%, transparent); }
+
+  #vig { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(130% 110% at 50% 50%, transparent 58%, color-mix(in srgb, var(--bg-deep) 45%, transparent) 100%); }
+
+  /* 标注 */
+  #hud { position: absolute; inset: 0; pointer-events: none; }
+  .co { position: absolute; left: 0; top: 0; opacity: 0; }
+  .co-line { position: absolute; left: 0; top: 0; height: 1.5px; transform-origin: 0 50%; background: linear-gradient(90deg, color-mix(in srgb, var(--brand-2) 90%, transparent), color-mix(in srgb, var(--brand-2) 60%, transparent)); }
+  .co-dot { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--brand-2); box-shadow: 0 0 0 5px color-mix(in srgb, var(--brand-2) 25%, transparent); }
+  .co-chip { position: absolute; white-space: nowrap; padding: 12px 20px 13px; border-radius: 12px; background: var(--panel); color: var(--text); font-size: var(--co-size, 30px); font-weight: 600; letter-spacing: 1px;
+    box-shadow: 0 18px 40px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.12); backdrop-filter: blur(8px); }
+  .co-chip small { display: block; font-size: 17px; font-weight: 400; color: var(--text-dim); margin-top: 4px; letter-spacing: .6px; }
+  .co-chip em { font-style: normal; color: var(--brand-2); }
+
+  /* 层级 */
+  #cards { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+  #subwrap { z-index: 10; }
+  #cursor, #ripple { pointer-events: none; z-index: 11; }
+  #fade { z-index: 20; }
+
+  /* 光标 */
+  #cursor { position: absolute; left: 0; top: 0; width: 34px; height: 34px; opacity: 0; filter: drop-shadow(0 4px 8px rgba(0,0,0,.35)); }
+  #ripple { position: absolute; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.95); opacity: 0; box-shadow: 0 0 0 1px rgba(15,37,69,.25); }
+
+  /* 字幕 */
+  /* 白字黑描边，和剪映第一个预设样式一致：浅色界面、深色卡片上都看得清，交剪映草稿时字幕轨也用同一个样式 */
+  #subwrap { position: absolute; left: 0; right: 0; bottom: 0; height: 190px; pointer-events: none; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 54px; opacity: 0; }
+  #sub { color: var(--sub-color, #fff); font-size: var(--sub-size, 34px); font-weight: 500; letter-spacing: 1.5px; line-height: 1.5; text-align: center; max-width: 1500px;
+    -webkit-text-stroke: var(--sub-stroke-w, 6px) var(--sub-stroke, #000); paint-order: stroke fill; }
+
+  /* 片头卡 */
+  .card { position: absolute; inset: 0; opacity: 0; pointer-events: none; overflow: hidden; }
+  .card.title { background: var(--bg-deep); }
+  .title-bg { position: absolute; inset: -40px; background-size: cover; background-position: center 58%; }
+  .title-shade { position: absolute; inset: 0; background: linear-gradient(90deg, color-mix(in srgb, var(--bg-deep) 88%, transparent) 0%, color-mix(in srgb, var(--bg-deep) 50%, transparent) 42%, transparent 78%), linear-gradient(0deg, color-mix(in srgb, var(--bg-deep) 55%, transparent), transparent 45%); }
+  .title-text { position: absolute; left: 160px; top: 360px; color: #fff; }
+  .title-k { font-family: var(--mono); font-size: 20px; letter-spacing: 8px; color: var(--brand); font-weight: 400; text-transform: uppercase; }
+  .title-en { font-family: var(--serif); font-style: italic; font-weight: 300; font-size: 40px; color: var(--text-dim); margin-top: 18px; letter-spacing: .5px; }
+  .title-h { font-size: 104px; font-weight: 600; letter-spacing: 14px; margin-top: 26px; white-space: nowrap; color: var(--text); }
+  .title-rule { height: 2px; width: 520px; background: linear-gradient(90deg, var(--brand), transparent); margin-top: 38px; transform-origin: 0 50%; }
+  .title-items { display: flex; gap: 46px; margin-top: 34px; font-size: var(--card-small-size, 30px); letter-spacing: 4px; color: rgba(255,255,255,.88); }
+  .title-items span { display: inline-flex; align-items: center; gap: 14px; }
+  .title-items b { font-family: var(--mono); font-weight: 400; font-size: 17px; color: var(--brand); letter-spacing: 2px; }
+  .title-foot { position: absolute; left: 160px; bottom: 120px; font-size: var(--card-small-size, 30px); color: var(--text-dim); letter-spacing: 3px; }
+  .title-logo { position: absolute; right: 120px; top: 96px; height: 56px; }
+
+  /* 章节卡 */
+  img.seq { width: calc(100% + 80px); height: calc(100% + 80px); object-fit: cover; display: block; }
+  .chap { background: var(--bg-deep); }
+  .chap-bg { position: absolute; inset: -40px; background-size: cover; background-position: center; opacity: .92; }
+  .chap-shade { position: absolute; inset: 0; background: linear-gradient(90deg, color-mix(in srgb, var(--bg-deep) 90%, transparent) 0%, color-mix(in srgb, var(--bg-deep) 60%, transparent) 42%, color-mix(in srgb, var(--bg-deep) 8%, transparent) 78%, transparent 100%), linear-gradient(0deg, color-mix(in srgb, var(--bg-deep) 45%, transparent), transparent 40%); }
+  .chap-in { position: absolute; left: 160px; top: 50%; transform: translateY(-50%); color: #fff; display: flex; align-items: center; gap: 56px; }
+  .chap-no { font-family: var(--serif); font-style: italic; font-size: 170px; font-weight: 250; color: var(--brand); letter-spacing: -4px; line-height: 1; }
+  .chap-sep { width: 1px; height: 170px; background: color-mix(in srgb, var(--brand-2) 45%, transparent); }
+  .chap-name { font-size: 76px; font-weight: 600; letter-spacing: 10px; color: var(--text); }
+  .chap-en { font-family: var(--mono); font-size: 17px; letter-spacing: 6px; color: var(--brand); text-transform: uppercase; margin-bottom: 18px; }
+  .chap-sub { font-size: 28px; color: var(--text-dim); letter-spacing: 3px; margin-top: 18px; }
+  .chap-mark { width: 92px; height: 92px; border-radius: 22px; display: grid; place-items: center; margin-bottom: 30px; }
+
+  /* 左下角模块名 */
+  .card.lower { inset: auto auto 150px 96px; overflow: visible; }
+  .lw { position: relative; padding: 6px 80px 8px 22px; color: #fff; text-shadow: 0 2px 14px rgba(0,0,0,.45); border-radius: 4px; background: linear-gradient(90deg, color-mix(in srgb, var(--bg-deep) 82%, transparent), transparent); }
+  .lw::before { content: ''; position: absolute; left: 0; top: 4px; bottom: 6px; width: 4px; border-radius: 2px; background: var(--brand); transform-origin: 50% 100%; transform: scaleY(var(--bar, 1)); }
+  .lw-k { display: block; font-size: 17px; letter-spacing: 4px; color: var(--brand-2); margin-bottom: 6px; }
+  .lw b { display: block; font-size: 40px; font-weight: 600; letter-spacing: 4px; }
+  .lw small { display: block; font-size: 20px; color: var(--text-dim); margin-top: 8px; letter-spacing: 1.5px; }
+
+  /* 字幕卡、空镜 */
+  .note, .broll { background: var(--bg-deep); }
+  .broll .note-bg { opacity: 1; }
+  .broll-shade { position: absolute; inset: 0; background: linear-gradient(0deg, color-mix(in srgb, var(--bg-deep) 55%, transparent), transparent 35%), radial-gradient(120% 100% at 50% 50%, transparent 60%, color-mix(in srgb, var(--bg-deep) 35%, transparent)); }
+  .note-bg { position: absolute; inset: -40px; background-size: cover; background-position: center; opacity: .55; }
+  .note-shade { position: absolute; inset: 0; background: radial-gradient(80% 70% at 50% 50%, color-mix(in srgb, var(--bg-deep) 35%, transparent), color-mix(in srgb, var(--bg-deep) 85%, transparent)); }
+  .note-in { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; color: #fff; }
+  .note-in p { margin: 0 0 26px; font-size: 50px; font-weight: 500; letter-spacing: 4px; text-shadow: 0 2px 18px rgba(0,0,0,.5); }
+  .note-in p + p { font-size: 26px; color: var(--text-dim); letter-spacing: 2px; font-weight: 400; }
+  .note-in.small { top: 80%; }
+  .note-in.small p { font-size: 26px; letter-spacing: 3px; color: var(--text-dim); font-weight: 400; }
+  .card.note:has(.note-in.small) { background: transparent; }
+  #fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+
+  /* 示意图卡：讲接入方式、部署结构这类看不见的东西 */
+  .card.diagram { background: var(--bg-deep); }
+  .dg-shade { position: absolute; inset: 0; background: radial-gradient(90% 80% at 50% 45%, color-mix(in srgb, var(--bg-deep) 72%, transparent), color-mix(in srgb, var(--bg-deep) 94%, transparent)); }
+  .dg-title { position: absolute; left: 120px; top: 92px; font-family: var(--mono); font-size: 18px; letter-spacing: 6px; color: var(--brand); text-transform: uppercase; }
+  .dg-svg { position: absolute; left: 0; top: 0; overflow: visible; }
+  .dg-edge { fill: none; stroke: color-mix(in srgb, var(--brand-2) 90%, transparent); stroke-width: 2.2; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--brand) 55%, transparent)); }
+  .dg-edge.dash { stroke: color-mix(in srgb, var(--accent) 85%, transparent); stroke-width: 1.8; }
+  .dg-box { position: absolute; border: 1px dashed color-mix(in srgb, var(--text) 38%, transparent); border-radius: 22px; background: color-mix(in srgb, var(--text) 3%, transparent); }
+  .dg-box span { position: absolute; left: 26px; top: -15px; padding: 2px 14px; background: var(--bg-mid); color: var(--text); font-size: 22px; letter-spacing: 3px; border-radius: 6px; }
+  .dg-node { position: absolute; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--brand-2) 55%, transparent); background: linear-gradient(160deg, color-mix(in srgb, var(--bg-top) 92%, transparent), color-mix(in srgb, var(--bg-deep) 92%, transparent)); box-shadow: 0 24px 60px rgba(0,0,0,.45); display: flex; flex-direction: column; justify-content: center; padding: 0 30px; color: var(--text); }
+  .dg-node b { font-size: 34px; font-weight: 600; letter-spacing: 3px; }
+  .dg-node small { font-size: 19px; color: var(--text-dim); margin-top: 10px; letter-spacing: 1px; }
+  .dg-node.core { border-color: var(--brand-2); box-shadow: 0 0 0 6px color-mix(in srgb, var(--brand) 12%, transparent), 0 30px 80px rgba(0,0,0,.5); }
+  .dg-node.core b { font-size: 44px; color: var(--brand-2); }
+  .dg-node.lit { box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-2) 28%, transparent), 0 0 50px color-mix(in srgb, var(--brand) 45%, transparent); }
+  .dg-label { position: absolute; transform: translateX(-50%); white-space: nowrap; font-size: 20px; color: var(--brand-2); letter-spacing: 1.5px; padding: 6px 14px; border-radius: 8px; background: color-mix(in srgb, var(--bg-deep) 85%, transparent); }
+
+  /* 实物飞入卡：名片、单据 */
+  .card.float { overflow: visible; }
+  .float-img { position: absolute; left: 0; top: 0; border-radius: 10px; box-shadow: 0 40px 90px rgba(0,0,0,.55), 0 10px 24px rgba(0,0,0,.35); transform-origin: 50% 50%; }
+
+  /* 场景版式：场景照片的屏幕位置贴第二个页面，旁边可以放一部手机 */
+  .scene-photo { position: absolute; left: 0; top: 0; background-size: cover; background-position: center; }
+  .scene-screen { position: absolute; overflow: hidden; background: #000; box-shadow: 0 0 60px color-mix(in srgb, var(--brand-2) 12%, transparent); }
+  .scene-screen iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; background: #000; }
+  .scene-glare { position: absolute; inset: 0; background: linear-gradient(115deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,0) 32%, rgba(255,255,255,0) 70%, rgba(255,255,255,.04) 100%); pointer-events: none; }
+
+  /* 手机外框 */
+  .phone { position: absolute; border-radius: 62px; background: linear-gradient(145deg, #2a2f2b, #0b0e0c 40%, #1b1f1c); box-shadow: inset 0 0 0 2px rgba(255,255,255,.12), 0 50px 120px rgba(0,0,0,.6), 0 18px 40px rgba(0,0,0,.45); }
+  .phone iframe { position: absolute; left: 20px; top: 28px; border: 0; border-radius: 44px; background: #000; }
+  .phone-island { position: absolute; left: 50%; top: 40px; width: 112px; height: 32px; margin-left: -56px; border-radius: 20px; background: #000; }
+
+  /* 常驻角标（品牌 logo） */
+  #badge { position: absolute; right: 56px; top: 44px; height: 40px; z-index: 9; opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg"><div class="grid"></div><div class="glow g1"></div><div class="glow g2"></div></div>
+  <div id="world"></div>
+  <div id="focus"></div>
+  <div id="ring"></div>
+  <div id="vig"></div>
+  <div id="hud"></div>
+  <div id="cards"></div>
+  <img id="badge" alt="" />
+  <div id="subwrap"><div id="sub"></div></div>
+  <svg id="cursor" viewBox="0 0 34 34"><path d="M7 3.5v22.6l5.6-5.3 3.7 8.6 3.9-1.7-3.7-8.4h7.7z" fill="#111827" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/></svg>
+  <div id="ripple"></div>
+  <div id="fade"></div>
+</div>
+<script type="module" src="./engine.js"></script>
+</body>
+</html>

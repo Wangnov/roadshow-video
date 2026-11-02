@@ -1,0 +1,15 @@
+{
+  "name": "roadshow-film",
+  "private": true,
+  "type": "module",
+  "description": "路演演示片工程：真实界面逐帧渲染",
+  "scripts": {
+    "check": "node build/check.mjs all",
+    "render": "node build/render.mjs",
+    "mux": "node build/mux.mjs",
+    "join": "node build/join.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.62.1"
+  }
+}

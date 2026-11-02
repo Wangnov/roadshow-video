@@ -1,0 +1,20 @@
+# 成片与中间产物不入库
+node_modules/
+frames/
+out/
+build/apicache/
+assets/seq/
+gen/
+audio/vo/*.wav
+audio/vo/*.mp3
+audio/stems*/
+audio/mix_*.wav
+audio/music_*.wav
+audio/tl_*.json
+*.mp4
+__pycache__/
+audio/mix_*.json
+试听/audio/
+试听/norm/
+试听/*.wav
+试听/*.mp3
